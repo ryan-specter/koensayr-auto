@@ -1183,6 +1183,17 @@ def _dispatch_head_with_avrcp_block(key_reg: str, label_prefix: str, suffix: str
     return _patch_h_avrcp_block(key_reg, label_prefix) + "\n\n    " + suffix
 
 
+def _dispatch_after_get_keycode(key_reg: str, label_prefix: str) -> str:
+    """getKeyCode → move-result → AVRCP filter → const/4 v3, 0x3 (Patch H tail)."""
+    return (
+        "    invoke-virtual {p1}, Landroid/view/KeyEvent;->getKeyCode()I\n\n"
+        f"    move-result {key_reg}\n\n"
+        + _patch_h_avrcp_block(key_reg, label_prefix)
+        + "\n\n"
+        "    const/4 v3, 0x3"
+    )
+
+
 # Stock Java (3.0.2 / 3.0.7) — includes .line debug comments.
 _OLD_DISPATCH_JAVA_LINES = """\
     .line 673
@@ -1238,13 +1249,24 @@ def _base_activity_dispatch_pairs():
     return v0
 
 """
-    suffix = _dispatch_head_with_avrcp_block("v2", "patch_h", "const/4 v3, 0x3")
     pairs = []
     for old_mid in (_OLD_DISPATCH_JAVA_LINES, _OLD_DISPATCH_JAVA, _OLD_DISPATCH_KOTLIN):
-        pairs.append((prefix + old_mid, prefix + suffix))
+        kc = "    invoke-virtual {p1}, Landroid/view/KeyEvent;->getKeyCode()I"
+        if kc not in old_mid:
+            continue
+        head, _, _ = old_mid.partition(kc)
+        pairs.append((
+            prefix + old_mid,
+            prefix + head + _dispatch_after_get_keycode("v2", "patch_h"),
+        ))
     # Kotlin 2.8.x prologue with a low .locals count — AVRCP block needs v3.
     prefix_l4 = prefix.replace(".locals 7", ".locals 4", 1)
-    pairs.append((prefix_l4 + _OLD_DISPATCH_KOTLIN, prefix_l4 + suffix))
+    kc = "    invoke-virtual {p1}, Landroid/view/KeyEvent;->getKeyCode()I"
+    head, _, _ = _OLD_DISPATCH_KOTLIN.partition(kc)
+    pairs.append((
+        prefix_l4 + _OLD_DISPATCH_KOTLIN,
+        prefix_l4 + head + _dispatch_after_get_keycode("v2", "patch_h"),
+    ))
     return pairs
 
 
