@@ -264,11 +264,12 @@ VERSION_FIRMWARE=""
 FILENAME_SYSTEM_IMAGE_TARGET=""
 FILENAME_MUSIC_APK=""
 
-# Schema: <version>|<system.img md5>|<boot.img md5>|<rom.zip md5>|<music APK filename>.
-# system.img md5 is for the RAW image (post-simg2img if input was sparse).
+# Schema: <version>|<system.img md5(s)>|<boot.img md5>|<rom.zip md5>|<music APK filename>.
+# system.img md5 is the RAW ext4 image used for patching (post-simg2img if the zip held a sparse image).
+# Multiple system.img md5s are comma-separated (Innioasis sparse→raw vs y1-community pre-expanded zips).
 KNOWN_FIRMWARES=(
   "3.0.2|473991dadeb1a8c4d25902dee9ee362b|1f7920228a20c01ad274c61c94a8cf36|82657db82578a38c6f1877e02407127a|com.innioasis.y1_3.0.2.apk"
-  "3.0.7|663baf9f7f2a08caa82e3fba7a9baa28|83b946d1799b4f0281ba8e808ed7911b|aa9847088859176c76d8e203970e7032|com.innioasis.y1_3.0.7.apk"
+  "3.0.7|663baf9f7f2a08caa82e3fba7a9baa28,017d62eb54fe18a4dc0b70d380763c22|83b946d1799b4f0281ba8e808ed7911b|aa9847088859176c76d8e203970e7032|com.innioasis.y1_3.0.7.apk"
 )
 
 # (PATH_SCRIPT_DIR set earlier — used by the --artifacts-dir staging fallback.)
@@ -327,6 +328,20 @@ md5_of() {
   fi
 }
 
+# md5_matches_field <manifest-field-value> <actual-md5>
+# Manifest fields may list comma-separated alternates (e.g. Innioasis vs y1-community system.img).
+md5_matches_field() {
+  local field_value="$1" actual="$2" alt
+  IFS=',' read -ra alts <<< "$field_value"
+  for alt in "${alts[@]}"; do
+    alt="${alt//[[:space:]]/}"
+    if [[ "$actual" == "$alt" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # resolve_version <kind: system|boot|rom> <md5> — echos matching firmware
 # version on stdout, returns 1 on no match.
 resolve_version() {
@@ -340,7 +355,7 @@ resolve_version() {
   local row parts
   for row in "${KNOWN_FIRMWARES[@]}"; do
     IFS='|' read -ra parts <<< "$row"
-    if [[ "${parts[$idx]}" == "$md5" ]]; then
+    if md5_matches_field "${parts[$idx]}" "$md5"; then
       echo "${parts[0]}"
       return 0
     fi
@@ -585,15 +600,15 @@ EOF
   if [[ "$MANIFEST_MATCH" == true && "$FLAG_ACCEPT_ANY_FIRMWARE" == false ]]; then
     sys_md5=$(md5_of "$PATH_SYSTEM_IMG")
     expected=$(firmware_field "$VERSION_FIRMWARE" system_md5)
-    if [[ "$sys_md5" != "$expected" ]]; then
-      echo "ERROR: extracted system.img md5 ${sys_md5} differs from manifest v${VERSION_FIRMWARE} (expected ${expected})" >&2
+    if ! md5_matches_field "$expected" "$sys_md5"; then
+      echo "ERROR: extracted system.img md5 ${sys_md5} differs from manifest v${VERSION_FIRMWARE} (expected one of: ${expected})" >&2
       exit 1
     fi
   elif [[ "$MANIFEST_MATCH" == true && "$FLAG_ACCEPT_ANY_FIRMWARE" == true ]]; then
     sys_md5=$(md5_of "$PATH_SYSTEM_IMG")
     expected=$(firmware_field "$VERSION_FIRMWARE" system_md5)
-    if [[ "$sys_md5" != "$expected" ]]; then
-      echo "  WARNING: extracted system.img md5 ${sys_md5} differs from manifest v${VERSION_FIRMWARE} (expected ${expected}); continuing (--accept-any-firmware)"
+    if ! md5_matches_field "$expected" "$sys_md5"; then
+      echo "  WARNING: extracted system.img md5 ${sys_md5} differs from manifest v${VERSION_FIRMWARE} (expected one of: ${expected}); continuing (--accept-any-firmware)"
     fi
   fi
 fi

@@ -130,8 +130,8 @@ fi
 
 rom_md5="$(md5sum "${STAGING}/rom.zip" | awk '{print $1}')"
 expected_rom_md5="$(firmware_manifest_field "$FW_VERSION" rom_md5)"
-if [[ "$rom_md5" != "$expected_rom_md5" ]]; then
-  echo "ERROR: rom.zip md5 ${rom_md5} does not match KNOWN_FIRMWARES v${FW_VERSION} (expected ${expected_rom_md5})" >&2
+if ! firmware_md5_matches_field "$expected_rom_md5" "$rom_md5"; then
+  echo "ERROR: rom.zip md5 ${rom_md5} does not match KNOWN_FIRMWARES v${FW_VERSION} (expected one of: ${expected_rom_md5})" >&2
   echo "       Refusing to patch — update apply.bash manifest or fix the upstream download URL." >&2
   exit 1
 fi

@@ -45,6 +45,19 @@ firmware_manifest_field() {
   echo "$row" | cut -d'|' -f"$idx"
 }
 
+# firmware_md5_matches_field <manifest-field-value> <actual-md5>
+firmware_md5_matches_field() {
+  local field_value="$1" actual="$2" alt
+  IFS=',' read -ra alts <<< "$field_value"
+  for alt in "${alts[@]}"; do
+    alt="${alt//[[:space:]]/}"
+    if [[ "$actual" == "$alt" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 firmware_version_from_slug() {
   local slug="$1"
   if [[ "$slug" =~ ^y1-stock-rom-([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then

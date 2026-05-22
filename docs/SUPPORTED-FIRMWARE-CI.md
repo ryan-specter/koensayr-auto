@@ -39,7 +39,7 @@ Diagnostic tooling under `tools/` is **not** embedded in the ROM.
 
 | Input | CI expectation |
 |-------|----------------|
-| y1-stock-rom **3.0.2** / **3.0.7** | Supported; matches [`KNOWN_FIRMWARES`](../apply.bash) |
+| y1-stock-rom **3.0.2** / **3.0.7** | Supported; matches [`KNOWN_FIRMWARES`](../apply.bash) (3.0.7 accepts both Innioasis and y1-community `system.img` layouts) |
 
 Failed matrix jobs do not block other releases (`fail-fast: false`).
 

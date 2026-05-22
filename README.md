@@ -92,11 +92,11 @@ Known stock firmwares recognised by `KNOWN_FIRMWARES` in the bash. Add a row (sa
 | Version | system.img (raw, extracted) | boot.img (in zip; not consumed since v1.7.0) | rom.zip (input) | Music APK basename in `app/` |
 |---|---|---|---|---|
 | **3.0.2** | `473991dadeb1a8c4d25902dee9ee362b` | `1f7920228a20c01ad274c61c94a8cf36` | `82657db82578a38c6f1877e02407127a` | `com.innioasis.y1_3.0.2.apk` |
-| **3.0.7** | `663baf9f7f2a08caa82e3fba7a9baa28` | `83b946d1799b4f0281ba8e808ed7911b` | `aa9847088859176c76d8e203970e7032` | `com.innioasis.y1_3.0.7.apk` |
+| **3.0.7** | `663baf9f…` (Innioasis sparse→raw) or `017d62eb…` ([y1-community](https://github.com/y1-community/y1-stock-rom) pre-expanded) | `83b946d1799b4f0281ba8e808ed7911b` | `aa9847088859176c76d8e203970e7032` | `com.innioasis.y1_3.0.7.apk` |
 
 The MediaTek BT stack (`bin/mtkbt`, `lib/libextavrcp*.so`, `lib/libaudio.a2dp.default.so`, `app/MtkBt.odex`) is byte-identical between 3.0.2 and 3.0.7 — every native patch in `--avrcp` / `--bluetooth` applies unchanged. Only the music APK differs (resource-ID shifts + a few additions in `Y1Repository`), and `patch_y1_apk.py`'s smali anchors handle both builds.
 
-Stock sizes: 3.0.2 `rom.zip` 259,502,414 bytes (raw `system.img` inside); 3.0.7 `rom.zip` 189,791,144 bytes (sparse `system.img` inside, auto-de-sparsed via `simg2img`). Both `system.img`s expand to 681,574,400 bytes raw ext4. `boot.img` 4,706,304 bytes on both.
+Stock sizes: 3.0.2 `rom.zip` 259,502,414 bytes (raw `system.img` inside); 3.0.7 `rom.zip` from Innioasis may ship a sparse `system.img` (auto-de-sparsed via `simg2img`), while [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) releases use the same `rom.zip` MD5 but a pre-expanded raw `system.img`. Both raw `system.img`s are 681,574,400-byte ext4. `boot.img` 4,706,304 bytes on both.
 
 ## Requirements
 
