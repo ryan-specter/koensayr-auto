@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Discover upstream rom.zip releases
+      - name: Discover allowlisted upstream rom.zip releases
         id: discover
         env:
           GH_TOKEN: ${{ github.token }}

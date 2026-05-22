@@ -2,14 +2,20 @@
 
 GitHub Actions workflow [`build-firmware-releases.yml`](../.github/workflows/build-firmware-releases.yml) produces patched **`rom.zip`** releases on [ryan-specter/koensayr-auto](https://github.com/ryan-specter/koensayr-auto/releases).
 
-## Upstream sources
+## Upstream sources (allowlist)
 
-| Repository | Asset filter | Example release tags |
-|------------|--------------|----------------------|
-| [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) | `rom.zip` only | `Latest-3.0.7`, `3.0.2`, `2.8.2`, `ADB-2.1.9` |
-| [rockbox-y1/rockbox](https://github.com/rockbox-y1/rockbox) | `rom.zip` only | `stable-v0.5`, recent `nightly-*` tags |
+CI only builds these upstream tags (see [`tools/ci/discover-inputs.sh`](../tools/ci/discover-inputs.sh)):
 
-**Not built:** `rom_type_b.zip`, `rom_240p.zip`, `update.zip`, voice packs, and other non-`rom.zip` assets.
+| Repository | Upstream tags | Asset |
+|------------|---------------|-------|
+| [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) | upstream tags **3.0.2**, **Latest-3.0.7** | `rom.zip` |
+| [rockbox-y1/rockbox](https://github.com/rockbox-y1/rockbox) | **stable-v0.5** and newer **stable-v\*** releases | `rom.zip` |
+
+**Koensayr release names:** stock **3.0.7** firmware is published as `y1-stock-rom@3.0.7` even though the upstream tag is `Latest-3.0.7`. Release notes still record the upstream tag.
+
+**Not built by CI:** other stock tags (`2.8.2`, `ADB-2.1.9`, `type-b-1.7.6`, …), Rockbox `nightly-*`, `rom_type_b.zip`, `rom_240p.zip`, `update.zip`, `rockbox.apk`, voice packs, and other assets.
+
+To add a stock tag or change Rockbox rules, edit the allowlist in `discover-inputs.sh`.
 
 ## Output naming
 
@@ -32,9 +38,8 @@ Diagnostic tooling under `tools/` is **not** embedded in the ROM.
 
 | Input | CI expectation |
 |-------|----------------|
-| y1-stock-rom **3.0.2** / **3.0.7** | Highest confidence; matches [`KNOWN_FIRMWARES`](../apply.bash) |
-| y1-stock-rom **2.8.2** / **ADB-2.1.9** | Attempted with `--skip-md5`; may fail until patch offsets are verified |
-| rockbox **rom.zip** | Best-effort; custom `system.img` / BT stack may differ from stock |
+| y1-stock-rom **3.0.2** / **3.0.7** | Supported; matches [`KNOWN_FIRMWARES`](../apply.bash) |
+| rockbox **stable-v0.5+** `rom.zip` | Best-effort; custom `system.img` / BT stack may differ from stock |
 
 Failed matrix jobs do not block other releases (`fail-fast: false`).
 
@@ -46,7 +51,7 @@ A build is skipped when a release already exists and its notes contain the upstr
 
 | Script | Role |
 |--------|------|
-| [`tools/ci/discover-inputs.sh`](../tools/ci/discover-inputs.sh) | Emit JSON matrix of upstream `rom.zip` assets |
+| [`tools/ci/discover-inputs.sh`](../tools/ci/discover-inputs.sh) | Emit JSON matrix for allowlisted upstream `rom.zip` assets |
 | [`tools/ci/build-one.sh`](../tools/ci/build-one.sh) | Download → patch → repack → `gh release` |
 | [`tools/ci/extract-rom.sh`](../tools/ci/extract-rom.sh) | Unzip upstream ROM; record sparse `system.img` |
 | [`tools/ci/repack-rom.sh`](../tools/ci/repack-rom.sh) | Replace `system.img` and zip patched `rom.zip` |
