@@ -125,7 +125,7 @@ Download from **this repo’s release tag**, not from [y1-community/y1-stock-rom
 | [y1-stock-rom@3.0.2](https://github.com/ryan-specter/koensayr-auto/releases/tag/y1-stock-rom%403.0.2) | 329,015,308 bytes | `2371ac0970c0dbac318077373467859439aa0414caa15e29b90d8e879b8bbd80` |
 | [y1-stock-rom@3.0.7](https://github.com/ryan-specter/koensayr-auto/releases/tag/y1-stock-rom%403.0.7) | 309,073,126 bytes | `2fa3fb7bf9ced11a21d0ce3bd0aec8a521dd3c6f22d9e0be8301b9ca3951dddb` |
 
-**Triggers:** weekly schedule, pushes that touch patcher code, and manual `workflow_dispatch` (optional `force` / `source_repo` filter).
+**Triggers:** weekly schedule, pushes to `main` that touch patcher/CI paths (always republish both firmware tags), and manual `workflow_dispatch` (optional `force` / `source_repo` filter).
 
 **Confidence:** Stock **3.0.2** / **3.0.7** OTAs are hardware-verified. See [`docs/SUPPORTED-FIRMWARE-CI.md`](docs/SUPPORTED-FIRMWARE-CI.md).
 
