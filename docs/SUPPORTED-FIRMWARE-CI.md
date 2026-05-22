@@ -45,7 +45,9 @@ Failed matrix jobs do not block other releases (`fail-fast: false`).
 
 ## Idempotency
 
-A build is skipped when a release already exists and its notes contain the upstream asset SHA256, unless `workflow_dispatch` sets **force**.
+- **Push to `main`:** always rebuilds and republishes (`--force`), so patched `com.innioasis.y1` APKs and other `--all` changes land in the latest `rom.zip` releases.
+- **Weekly schedule:** skips a matrix entry only when `build-manifest.json` on the existing release matches both the upstream `rom.zip` SHA256 and the current koensayr git revision (`koensayr_git_sha`).
+- **`workflow_dispatch`:** set **force** to rebuild regardless.
 
 ## Scripts
 
@@ -54,5 +56,6 @@ A build is skipped when a release already exists and its notes contain the upstr
 | [`tools/ci/discover-inputs.sh`](../tools/ci/discover-inputs.sh) | Emit JSON matrix for allowlisted upstream `rom.zip` assets |
 | [`tools/ci/build-one.sh`](../tools/ci/build-one.sh) | Download → MD5/SHA256 gate → patch → repack → `gh release` |
 | [`tools/ci/firmware-manifest.sh`](../tools/ci/firmware-manifest.sh) | Read `KNOWN_FIRMWARES` rows from `apply.bash` |
+| [`tools/ci/patch-revision.sh`](../tools/ci/patch-revision.sh) | Current git SHA recorded in `build-manifest.json` |
 | [`tools/ci/extract-rom.sh`](../tools/ci/extract-rom.sh) | Unzip upstream ROM; record sparse `system.img` |
 | [`tools/ci/repack-rom.sh`](../tools/ci/repack-rom.sh) | Replace `system.img` and zip patched `rom.zip` |

@@ -68,14 +68,46 @@ EXTRACT="${WORKDIR}/rom-extract"
 mkdir -p "$STAGING" "$EXTRACT"
 
 KOENSAYR_VERSION="$(grep -E '^# Version:' apply.bash | awk '{print $3}')"
+PATCH_REVISION="$("${CI_DIR}/patch-revision.sh")"
 
-# Idempotency: skip when release exists with matching upstream digest.
+# Idempotency: skip only when an existing release was built from the same upstream
+# rom.zip *and* the same koensayr git revision (patches / apply.bash / Y1Bridge / su).
+# Push workflows pass --force to always republish after commits to main.
+release_already_current() {
+  local tag="$1" manifest_dir published_rev published_digest
+  if ! gh release view "$tag" >/dev/null 2>&1; then
+    return 1
+  fi
+  manifest_dir="$(mktemp -d)"
+  if ! gh release download "$tag" -p "build-manifest.json" -D "$manifest_dir" >/dev/null 2>&1; then
+    rm -rf "$manifest_dir"
+    return 1
+  fi
+  if [[ ! -f "${manifest_dir}/build-manifest.json" ]]; then
+    rm -rf "$manifest_dir"
+    return 1
+  fi
+  read -r published_rev published_digest < <(
+    python3 - "${manifest_dir}/build-manifest.json" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+print(data.get("koensayr_git_sha", ""), data.get("upstream_digest_sha256", ""))
+PY
+  )
+  rm -rf "$manifest_dir"
+  if [[ -z "$published_rev" || "$published_rev" != "$PATCH_REVISION" ]]; then
+    return 1
+  fi
+  if [[ -n "$DIGEST" && "$published_digest" != "$DIGEST" ]]; then
+    return 1
+  fi
+  return 0
+}
+
 if [[ "$FORCE" != true && "${KOENSAYR_SKIP_PUBLISH:-}" != "1" ]]; then
-  if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-    if [[ -n "$DIGEST" ]] && gh release view "$RELEASE_TAG" --json body -q .body | grep -qF "$DIGEST"; then
-      echo "[build-one] Release ${RELEASE_TAG} already published for digest ${DIGEST}; skipping."
-      exit 0
-    fi
+  if release_already_current "$RELEASE_TAG"; then
+    echo "[build-one] Release ${RELEASE_TAG} already matches upstream digest and patch revision ${PATCH_REVISION:0:12}; skipping."
+    exit 0
   fi
 fi
 
@@ -171,6 +203,7 @@ with rom.open("rb") as f:
         h.update(chunk)
 data = {
     "koensayr_version": "${KOENSAYR_VERSION}",
+    "koensayr_git_sha": "${PATCH_REVISION}",
     "source_repo": "${SOURCE_REPO}",
     "source_tag": "${SOURCE_TAG}",
     "release_tag": "${RELEASE_TAG}",
@@ -201,6 +234,11 @@ Patched **rom.zip** built by [koensayr-auto](https://github.com/${GITHUB_REPOSIT
 - Release tag: \`${SOURCE_TAG}\`
 - Asset: \`rom.zip\`
 - Upstream SHA256: \`${DIGEST}\`
+
+## Koensayr build
+
+- Version: \`${KOENSAYR_VERSION}\`
+- Git revision: \`${PATCH_REVISION}\` (includes \`com.innioasis.y1\` APK patches under \`src/patches/\`)
 
 ## Build output
 

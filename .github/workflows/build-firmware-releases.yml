@@ -45,7 +45,10 @@ jobs:
           if [[ -n "${{ github.event.inputs.source_repo }}" ]]; then
             args+=(--source-repo "${{ github.event.inputs.source_repo }}")
           fi
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force }}" == "true" ]]; then
+          # Every push to main republishes firmware so patched com.innioasis.y1 APKs stay current.
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            args+=(--force)
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force }}" == "true" ]]; then
             args+=(--force)
           fi
           ./tools/ci/discover-inputs.sh "${args[@]}" > matrix.json
