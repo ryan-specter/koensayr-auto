@@ -273,12 +273,11 @@ echo "[build-one] Publishing GitHub release ${RELEASE_TAG}.."
 echo "[build-one]   upstream sha256: ${upstream_sha}"
 echo "[build-one]   output sha256:   ${output_sha}"
 if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-  gh release upload "$RELEASE_TAG" "$RELEASE_ASSET" "$MANIFEST" --clobber
-  gh release edit "$RELEASE_TAG" --notes-file "$NOTES"
-else
-  gh release create "$RELEASE_TAG" "$RELEASE_ASSET" "$MANIFEST" \
-    --title "Koensayr ${RELEASE_TAG}" \
-    --notes-file "$NOTES"
+  echo "[build-one] Removing prior release ${RELEASE_TAG} (replace with fresh build).."
+  gh release delete "$RELEASE_TAG" --yes
 fi
+gh release create "$RELEASE_TAG" "$RELEASE_ASSET" "$MANIFEST" \
+  --title "Koensayr ${RELEASE_TAG}" \
+  --notes-file "$NOTES"
 
-echo "[build-one] Uploaded ${RELEASE_TAG} (rom.zip + build-manifest.json)"
+echo "[build-one] Published ${RELEASE_TAG} (rom.zip + build-manifest.json)"

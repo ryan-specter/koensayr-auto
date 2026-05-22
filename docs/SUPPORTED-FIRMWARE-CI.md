@@ -45,7 +45,7 @@ Failed matrix jobs do not block other releases (`fail-fast: false`).
 
 ## Idempotency
 
-- **Push to `main`:** always rebuilds and republishes (`--force`), so patched `com.innioasis.y1` APKs and other `--all` changes land in the latest `rom.zip` releases.
+- **Push to `main`:** always rebuilds and republishes (`--force`), so patched `com.innioasis.y1` APKs and other `--all` changes land in the latest `rom.zip` releases. Each publish **deletes** the prior GitHub release tag and recreates it (no leftover assets such as older `rom-koensayr.zip` names).
 - **Weekly schedule:** skips a matrix entry only when `build-manifest.json` on the existing release matches both the upstream `rom.zip` SHA256 and the current koensayr git revision (`koensayr_git_sha`).
 - **`workflow_dispatch`:** set **force** to rebuild regardless.
 
