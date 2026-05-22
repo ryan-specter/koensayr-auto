@@ -121,6 +121,18 @@ echo "[build-one] Using patched system image: ${DEVEL_IMG}"
 OUTPUT_ROM="${WORKDIR}/rom-koensayr.zip"
 "${CI_DIR}/repack-rom.sh" "$EXTRACT" "$DEVEL_IMG" "$OUTPUT_ROM"
 
+# Fail closed if we accidentally repacked an unmodified upstream image.
+upstream_sha="$(sha256sum "${STAGING}/rom.zip" | awk '{print $1}')"
+output_sha="$(sha256sum "$OUTPUT_ROM" | awk '{print $1}')"
+if [[ "$upstream_sha" == "$output_sha" ]]; then
+  echo "ERROR: patched rom.zip is byte-identical to upstream — refusing to publish." >&2
+  exit 1
+fi
+if [[ "$(wc -c < "${STAGING}/rom.zip")" -ge "$(wc -c < "$OUTPUT_ROM")" ]]; then
+  echo "ERROR: patched rom.zip is not larger than upstream (expected system.img changes)." >&2
+  exit 1
+fi
+
 # Copy staging rom for convenience
 cp -f "$OUTPUT_ROM" "${STAGING}/rom-koensayr.zip"
 
@@ -166,6 +178,11 @@ Patched **rom.zip** built by [koensayr-auto](https://github.com/${GITHUB_REPOSIT
 - Asset: \`rom.zip\`
 - Upstream SHA256: \`${DIGEST}\`
 
+## Build output
+
+- Patched \`rom.zip\` SHA256: \`${output_sha}\` (see \`build-manifest.json\` on this release)
+- Upstream \`rom.zip\` was re-hashed at build time; output must differ (CI enforces this).
+
 ## Patches (\`--all\`)
 
 - Music-player UX (Artist→Album navigation)
@@ -186,14 +203,20 @@ adb shell rm -rf /data/data/com.innioasis.y1/code_cache/secondary-dexes/
 
 EOF
 
+# Flash tools expect the outer archive to be named rom.zip.
+RELEASE_ASSET="${WORKDIR}/rom.zip"
+cp -f "$OUTPUT_ROM" "$RELEASE_ASSET"
+
 echo "[build-one] Publishing GitHub release ${RELEASE_TAG}.."
+echo "[build-one]   upstream sha256: ${upstream_sha}"
+echo "[build-one]   output sha256:   ${output_sha}"
 if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-  gh release upload "$RELEASE_TAG" "$OUTPUT_ROM" --clobber
+  gh release upload "$RELEASE_TAG" "$RELEASE_ASSET" "$MANIFEST" --clobber
   gh release edit "$RELEASE_TAG" --notes-file "$NOTES"
 else
-  gh release create "$RELEASE_TAG" "$OUTPUT_ROM" \
+  gh release create "$RELEASE_TAG" "$RELEASE_ASSET" "$MANIFEST" \
     --title "Koensayr ${RELEASE_TAG}" \
     --notes-file "$NOTES"
 fi
 
-echo "[build-one] Uploaded ${RELEASE_TAG}"
+echo "[build-one] Uploaded ${RELEASE_TAG} (rom.zip + build-manifest.json)"

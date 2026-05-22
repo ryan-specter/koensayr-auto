@@ -116,7 +116,14 @@ Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/bui
 
 For each input it runs `./apply.bash --all --no-flash --accept-any-firmware`, repacks `rom.zip`, and publishes a release on this repo.
 
-**Release tag pattern:** `y1-stock-rom@{firmware-version}` (e.g. `y1-stock-rom@3.0.2`). Each release attaches one patched **`rom.zip`**.
+**Release tag pattern:** `y1-stock-rom@{firmware-version}` (e.g. `y1-stock-rom@3.0.2`). Each release attaches **`rom.zip`** (patched) plus **`build-manifest.json`**.
+
+Download from **this repo’s release tag**, not from [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) — upstream `rom.zip` is stock (~238–259 MB). Patched builds are larger (~295–329 MB) and have a different SHA256 (listed in the release notes / manifest).
+
+| Release | Expected `rom.zip` size (approx.) | Patched SHA256 (May 2026 CI) |
+|---------|-----------------------------------|------------------------------|
+| [y1-stock-rom@3.0.2](https://github.com/ryan-specter/koensayr-auto/releases/tag/y1-stock-rom%403.0.2) | 329,015,308 bytes | `2371ac0970c0dbac318077373467859439aa0414caa15e29b90d8e879b8bbd80` |
+| [y1-stock-rom@3.0.7](https://github.com/ryan-specter/koensayr-auto/releases/tag/y1-stock-rom%403.0.7) | 309,073,126 bytes | `2fa3fb7bf9ced11a21d0ce3bd0aec8a521dd3c6f22d9e0be8301b9ca3951dddb` |
 
 **Triggers:** weekly schedule, pushes that touch patcher code, and manual `workflow_dispatch` (optional `force` / `source_repo` filter).
 
