@@ -110,10 +110,10 @@ Stock sizes: 3.0.2 `rom.zip` 259,502,414 bytes (raw `system.img` inside); 3.0.7 
 
 ## Automated releases (GitHub Actions)
 
-Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/build-firmware-releases.yml) discovers every upstream release asset named **`rom.zip`** from:
+Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/build-firmware-releases.yml) builds an allowlisted set of upstream **`rom.zip`** releases:
 
-- [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom)
-- [rockbox-y1/rockbox](https://github.com/rockbox-y1/rockbox)
+- [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom): upstream tags **3.0.2** and **Latest-3.0.7** (published as `y1-stock-rom@3.0.2` / `@3.0.7`)
+- [rockbox-y1/rockbox](https://github.com/rockbox-y1/rockbox): **stable-v0.5** and newer **stable-v\*** releases
 
 For each input it runs `./apply.bash --all --no-flash --accept-any-firmware`, repacks `rom.zip`, and publishes a release on this repo.
 
@@ -121,7 +121,7 @@ For each input it runs `./apply.bash --all --no-flash --accept-any-firmware`, re
 
 **Triggers:** weekly schedule, pushes that touch patcher code, and manual `workflow_dispatch` (optional `force` / `source_repo` filter).
 
-**Confidence:** Stock **3.0.2** / **3.0.7** OTAs are hardware-verified. Older stock builds and Rockbox `rom.zip` files are built best-effort (`--skip-md5`); byte patchers may fail until offsets are validated for that image. See [`docs/SUPPORTED-FIRMWARE-CI.md`](docs/SUPPORTED-FIRMWARE-CI.md).
+**Confidence:** Stock **3.0.2** / **3.0.7** OTAs are hardware-verified. Rockbox stable releases are built best-effort. See [`docs/SUPPORTED-FIRMWARE-CI.md`](docs/SUPPORTED-FIRMWARE-CI.md).
 
 Local dry-run (no GitHub publish):
 

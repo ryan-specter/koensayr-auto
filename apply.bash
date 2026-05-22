@@ -462,9 +462,10 @@ patch_in_place_y1_apk() {
   local mount_rel="$1"
   local stage_dir="${PATH_TMP_STAGE}/$(basename "${mount_rel}")"
   local stock="${stage_dir}/stock.apk"
-  local patched="${PATH_SCRIPT_DIR}/src/patches/output/com.innioasis.y1_${VERSION_FIRMWARE}-patched.apk"
+  local out_dir="${PATH_SCRIPT_DIR}/src/patches/output"
+  local patched=""
 
-  mkdir -p "${stage_dir}"
+  mkdir -p "${stage_dir}" "${out_dir}"
   echo "  ${mount_rel}: extract → patch_y1_apk.py → write-back"
   sudo cp "${PATH_MOUNT}/${mount_rel}" "${stock}"
   sudo chown "$(id -u):$(id -g)" "${stock}"
@@ -481,10 +482,18 @@ patch_in_place_y1_apk() {
     exit 1
   fi
 
-  if [[ ! -f "${patched}" ]]; then
-    echo "ERROR: patch_y1_apk.py did not produce ${patched}" >&2
+  shopt -s nullglob
+  local produced=( "${out_dir}"/com.innioasis.y1_*-patched.apk )
+  shopt -u nullglob
+  if (( ${#produced[@]} == 0 )); then
+    echo "ERROR: patch_y1_apk.py did not produce com.innioasis.y1_*-patched.apk in ${out_dir}" >&2
     exit 1
   fi
+  if (( ${#produced[@]} > 1 )); then
+    echo "ERROR: multiple patched APKs in ${out_dir}: ${produced[*]}" >&2
+    exit 1
+  fi
+  patched="${produced[0]}"
 
   if ! sudo cp "${patched}" "${PATH_MOUNT}/${mount_rel}"; then
     echo "ERROR: failed to write patched ${mount_rel} back to mount" >&2

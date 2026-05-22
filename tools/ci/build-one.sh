@@ -88,11 +88,35 @@ echo "[build-one] Patching (koensayr ${KOENSAYR_VERSION}).."
   --firmware-slug "$SLUG" \
   --artifacts-dir "$STAGING"
 
-DEVEL_IMG="${STAGING}/system-${SLUG}-devel.img"
-if [[ ! -f "$DEVEL_IMG" ]]; then
-  echo "ERROR: expected patched image ${DEVEL_IMG}" >&2
+# apply.bash names the loop-mounted image system-${VERSION_FIRMWARE}-devel.img
+# (manifest version e.g. 3.0.2, or --firmware-slug when using --accept-any-firmware).
+resolve_devel_img() {
+  local staging="$1" slug="$2" source_tag="$3"
+  local p
+  for p in \
+    "${staging}/system-${slug}-devel.img" \
+    "${staging}/system-${source_tag}-devel.img"; do
+    if [[ -f "$p" ]]; then
+      echo "$p"
+      return 0
+    fi
+  done
+  for p in "${staging}"/system-*-devel.img; do
+    if [[ -f "$p" ]]; then
+      echo "$p"
+      return 0
+    fi
+  done
+  return 1
+}
+
+DEVEL_IMG="$(resolve_devel_img "$STAGING" "$SLUG" "$SOURCE_TAG" || true)"
+if [[ -z "$DEVEL_IMG" || ! -f "$DEVEL_IMG" ]]; then
+  echo "ERROR: expected patched system image under ${STAGING}/" >&2
+  echo "       (tried system-${SLUG}-devel.img and system-${SOURCE_TAG}-devel.img)" >&2
   exit 1
 fi
+echo "[build-one] Using patched system image: ${DEVEL_IMG}"
 
 OUTPUT_ROM="${WORKDIR}/rom-koensayr.zip"
 "${CI_DIR}/repack-rom.sh" "$EXTRACT" "$DEVEL_IMG" "$OUTPUT_ROM"
