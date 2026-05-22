@@ -8,18 +8,19 @@ CI only builds these upstream tags (see [`tools/ci/discover-inputs.sh`](../tools
 
 | Repository | Upstream tags | Asset |
 |------------|---------------|-------|
-| [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) | upstream tags **3.0.2**, **Latest-3.0.7** | `rom.zip` |
-| [rockbox-y1/rockbox](https://github.com/rockbox-y1/rockbox) | **stable-v0.5** and newer **stable-v\*** releases | `rom.zip` |
+| [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) | **3.0.2**, **Latest-3.0.7** | `rom.zip` |
 
 **Koensayr release names:** stock **3.0.7** firmware is published as `y1-stock-rom@3.0.7` even though the upstream tag is `Latest-3.0.7`. Release notes still record the upstream tag.
 
-**Not built by CI:** other stock tags (`2.8.2`, `ADB-2.1.9`, `type-b-1.7.6`, …), Rockbox `nightly-*`, `rom_type_b.zip`, `rom_240p.zip`, `update.zip`, `rockbox.apk`, voice packs, and other assets.
+**Not built by CI:** other stock tags (`2.8.2`, `ADB-2.1.9`, `type-b-1.7.6`, …), `rom_type_b.zip`, `rom_240p.zip`, `update.zip`, voice packs, and other assets.
 
-To add a stock tag or change Rockbox rules, edit the allowlist in `discover-inputs.sh`.
+Rockbox-Y1 `rom.zip` is out of scope: the image has no Innioasis `com.innioasis.y1` music APK, so the stock patch pipeline does not apply. Build Rockbox releases manually if needed.
+
+To add another stock tag, extend `Y1_UPSTREAM_TAGS` in `discover-inputs.sh`.
 
 ## Output naming
 
-- **GitHub release tag:** `{slug}@{upstream-tag}` (e.g. `y1-stock-rom@3.0.2`, `rockbox@stable-v0.5`)
+- **GitHub release tag:** `{slug}@{firmware-version}` (e.g. `y1-stock-rom@3.0.2`, `y1-stock-rom@3.0.7`)
 - **Internal firmware slug** (`--firmware-slug`): `@` replaced with `-` (e.g. `y1-stock-rom-3.0.2`) for `system-*-devel.img` naming
 
 ## Patch set
@@ -39,7 +40,6 @@ Diagnostic tooling under `tools/` is **not** embedded in the ROM.
 | Input | CI expectation |
 |-------|----------------|
 | y1-stock-rom **3.0.2** / **3.0.7** | Supported; matches [`KNOWN_FIRMWARES`](../apply.bash) |
-| rockbox **stable-v0.5+** `rom.zip` | Best-effort; custom `system.img` / BT stack may differ from stock |
 
 Failed matrix jobs do not block other releases (`fail-fast: false`).
 

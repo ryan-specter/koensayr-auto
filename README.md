@@ -110,18 +110,17 @@ Stock sizes: 3.0.2 `rom.zip` 259,502,414 bytes (raw `system.img` inside); 3.0.7 
 
 ## Automated releases (GitHub Actions)
 
-Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/build-firmware-releases.yml) builds an allowlisted set of upstream **`rom.zip`** releases:
+Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/build-firmware-releases.yml) builds an allowlisted set of [y1-stock-rom](https://github.com/y1-community/y1-stock-rom) **`rom.zip`** releases only:
 
-- [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom): upstream tags **3.0.2** and **Latest-3.0.7** (published as `y1-stock-rom@3.0.2` / `@3.0.7`)
-- [rockbox-y1/rockbox](https://github.com/rockbox-y1/rockbox): **stable-v0.5** and newer **stable-v\*** releases
+- Upstream tags **3.0.2** and **Latest-3.0.7** (published as `y1-stock-rom@3.0.2` / `@3.0.7`)
 
 For each input it runs `./apply.bash --all --no-flash --accept-any-firmware`, repacks `rom.zip`, and publishes a release on this repo.
 
-**Release tag pattern:** `{repo-slug}@{upstream-tag}` (e.g. `y1-stock-rom@3.0.2`, `rockbox@stable-v0.5`). Each release attaches one patched **`rom.zip`**.
+**Release tag pattern:** `y1-stock-rom@{firmware-version}` (e.g. `y1-stock-rom@3.0.2`). Each release attaches one patched **`rom.zip`**.
 
 **Triggers:** weekly schedule, pushes that touch patcher code, and manual `workflow_dispatch` (optional `force` / `source_repo` filter).
 
-**Confidence:** Stock **3.0.2** / **3.0.7** OTAs are hardware-verified. Rockbox stable releases are built best-effort. See [`docs/SUPPORTED-FIRMWARE-CI.md`](docs/SUPPORTED-FIRMWARE-CI.md).
+**Confidence:** Stock **3.0.2** / **3.0.7** OTAs are hardware-verified. See [`docs/SUPPORTED-FIRMWARE-CI.md`](docs/SUPPORTED-FIRMWARE-CI.md).
 
 Local dry-run (no GitHub publish):
 
