@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/spec/v2.0.0.html). For full prose detail on any entry, see `git log`.
 
-## [Unreleased]
+## [2.4.0] - 2026-05-22
 ### Fixed
 - Broader head-unit coverage for live metadata. Continuous notifications across track, play-state, position, and repeat/shuffle edges; head units detect each new track even when titles repeat; clean subscription state on every fresh connection.
 - Metadata + play / pause indicators now work on the broad class of head units and speakers that strictly require their AVRCP transaction IDs be echoed back. Previously, those head units silently rejected every response Y1 sent and fell back to key-press-only mode — metadata panes stayed blank and play-state indicators drifted out of sync.
