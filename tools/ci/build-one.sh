@@ -6,7 +6,7 @@
 #   ./tools/ci/build-one.sh \
 #     --source-repo y1-community/y1-stock-rom \
 #     --source-tag 3.0.2 \
-#     [--release-tag 3.0.2-koensayr-2.4.0]  # optional; derived from slug + apply.bash version if omitted
+#     [--release-tag 2.4.0-koensayr-3.0.2]  # optional; derived as VERSION-koensayr-FW if omitted
 #     --download-url <url> \
 #     --digest <sha256> \
 #     --slug y1-stock-rom-3.0.2 \
@@ -76,8 +76,8 @@ if ! FW_VERSION="$(firmware_version_from_slug "$SLUG")"; then
   echo "ERROR: slug ${SLUG} is not a known y1-stock-rom firmware id" >&2
   exit 1
 fi
-RELEASE_TAG="${FW_VERSION}-koensayr-${KOENSAYR_VERSION}"
-RELEASE_TITLE="${FW_VERSION}-koensayr-${KOENSAYR_VERSION}"
+RELEASE_TAG="${KOENSAYR_VERSION}-koensayr-${FW_VERSION}"
+RELEASE_TITLE="${KOENSAYR_VERSION}-koensayr-${FW_VERSION}"
 if [[ -n "$RELEASE_TAG_ARG" && "$RELEASE_TAG_ARG" != "$RELEASE_TAG" ]]; then
   echo "[build-one] NOTE: matrix release-tag ${RELEASE_TAG_ARG} ignored; using ${RELEASE_TAG}"
 fi
@@ -245,6 +245,8 @@ fi
 
 NOTES="${WORKDIR}/release-notes.md"
 {
+  echo "# ${RELEASE_TITLE}"
+  echo ""
   if [[ -f "$RELEASE_INTRO_FILE" ]]; then
     grep -v '^Devs:' "$RELEASE_INTRO_FILE" || true
   else
@@ -308,11 +310,14 @@ EOF
 RELEASE_ASSET="${WORKDIR}/rom.zip"
 cp -f "$OUTPUT_ROM" "$RELEASE_ASSET"
 
-LEGACY_RELEASE_TAG="y1-stock-rom@${FW_VERSION}"
-if [[ "$LEGACY_RELEASE_TAG" != "$RELEASE_TAG" ]] && gh release view "$LEGACY_RELEASE_TAG" >/dev/null 2>&1; then
-  echo "[build-one] Removing legacy release tag ${LEGACY_RELEASE_TAG}.."
-  gh release delete "$LEGACY_RELEASE_TAG" --yes
-fi
+for LEGACY_RELEASE_TAG in \
+  "y1-stock-rom@${FW_VERSION}" \
+  "${FW_VERSION}-koensayr-${KOENSAYR_VERSION}"; do
+  if [[ "$LEGACY_RELEASE_TAG" != "$RELEASE_TAG" ]] && gh release view "$LEGACY_RELEASE_TAG" >/dev/null 2>&1; then
+    echo "[build-one] Removing legacy release tag ${LEGACY_RELEASE_TAG}.."
+    gh release delete "$LEGACY_RELEASE_TAG" --yes
+  fi
+done
 
 echo "[build-one] Publishing GitHub release ${RELEASE_TAG} (${RELEASE_TITLE}).."
 echo "[build-one]   upstream sha256: ${upstream_sha}"

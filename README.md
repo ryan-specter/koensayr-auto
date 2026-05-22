@@ -112,18 +112,18 @@ Stock sizes: 3.0.2 `rom.zip` 259,502,414 bytes (raw `system.img` inside); 3.0.7 
 
 Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/build-firmware-releases.yml) builds an allowlisted set of [y1-stock-rom](https://github.com/y1-community/y1-stock-rom) **`rom.zip`** releases only:
 
-- Upstream tags **3.0.2** and **Latest-3.0.7** (published as `3.0.2-koensayr-*` / `3.0.7-koensayr-*`, where `*` is the koensayr version from `apply.bash`)
+- Upstream tags **3.0.2** and **Latest-3.0.7** (published as `{koensayr-version}-koensayr-3.0.2` / `{koensayr-version}-koensayr-3.0.7`)
 
 For each input it downloads upstream `rom.zip`, verifies SHA256 (from the release asset) and MD5 against [`KNOWN_FIRMWARES`](apply.bash), runs `./apply.bash --all --no-flash`, repacks `rom.zip`, and publishes a release on this repo.
 
-**Release tag pattern:** `{firmware-version}-koensayr-{koensayr-version}` (e.g. `3.0.7-koensayr-2.4.0`). Release notes start with [`.github/workflows/workflow.md`](.github/workflows/workflow.md). Each release attaches **`rom.zip`** (patched) plus **`build-manifest.json`**.
+**Release tag pattern:** `{koensayr-version}-koensayr-{firmware-version}` (e.g. `2.4.0-koensayr-3.0.7`) for Innioasis Updater compatibility. Release notes start with [`.github/workflows/workflow.md`](.github/workflows/workflow.md). Each release attaches **`rom.zip`** (patched) plus **`build-manifest.json`**.
 
 Download from **this repo’s release tag**, not from [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) — upstream `rom.zip` is stock (~238–259 MB). Patched builds are larger (~295–329 MB) and have a different SHA256 (listed in the release notes / manifest).
 
 | Release | Expected `rom.zip` size (approx.) | Patched SHA256 (May 2026 CI) |
 |---------|-----------------------------------|------------------------------|
-| 3.0.2-koensayr-* | 329,015,308 bytes (May 2026 CI) | `2371ac0970c0dbac318077373467859439aa0414caa15e29b90d8e879b8bbd80` |
-| 3.0.7-koensayr-* | 309,073,126 bytes (May 2026 CI) | `2fa3fb7bf9ced11a21d0ce3bd0aec8a521dd3c6f22d9e0be8301b9ca3951dddb` |
+| *-koensayr-3.0.2 | 329,015,308 bytes (May 2026 CI) | `2371ac0970c0dbac318077373467859439aa0414caa15e29b90d8e879b8bbd80` |
+| *-koensayr-3.0.7 | 309,073,126 bytes (May 2026 CI) | `2fa3fb7bf9ced11a21d0ce3bd0aec8a521dd3c6f22d9e0be8301b9ca3951dddb` |
 
 **Triggers:** weekly schedule, pushes to `main` that touch patcher/CI paths (always republish both firmware tags; existing releases are deleted and recreated), and manual `workflow_dispatch` (optional `force` / `source_repo` filter).
 
@@ -134,7 +134,7 @@ Local dry-run (no GitHub publish):
 ```bash
 KOENSAYR_SKIP_PUBLISH=1 ./tools/ci/build-one.sh \
   --source-repo y1-community/y1-stock-rom --source-tag 3.0.2 \
-  --release-tag 3.0.2-koensayr-2.4.0 \
+  --release-tag 2.4.0-koensayr-3.0.2 \
   --download-url "$(gh release view 3.0.2 --repo y1-community/y1-stock-rom --json assets -q '.assets[] | select(.name==\"rom.zip\") | .url')" \
   --digest "$(gh release view 3.0.2 --repo y1-community/y1-stock-rom --json assets -q '.assets[] | select(.name==\"rom.zip\") | .digest' | sed 's/sha256://')" \
   --slug y1-stock-rom-3.0.2
