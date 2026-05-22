@@ -57,5 +57,6 @@ Failed matrix jobs do not block other releases (`fail-fast: false`).
 | [`tools/ci/build-one.sh`](../tools/ci/build-one.sh) | Download → MD5/SHA256 gate → patch → repack → `gh release` |
 | [`tools/ci/firmware-manifest.sh`](../tools/ci/firmware-manifest.sh) | Read `KNOWN_FIRMWARES` rows from `apply.bash` |
 | [`tools/ci/patch-revision.sh`](../tools/ci/patch-revision.sh) | Current git SHA recorded in `build-manifest.json` |
+| [`.github/workflows/workflow.md`](../.github/workflows/workflow.md) | User-facing intro prepended to each GitHub release (edit for new features) |
 | [`tools/ci/extract-rom.sh`](../tools/ci/extract-rom.sh) | Unzip upstream ROM; record sparse `system.img` |
 | [`tools/ci/repack-rom.sh`](../tools/ci/repack-rom.sh) | Replace `system.img` and zip patched `rom.zip` |

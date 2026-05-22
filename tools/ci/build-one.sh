@@ -69,6 +69,19 @@ mkdir -p "$STAGING" "$EXTRACT"
 
 KOENSAYR_VERSION="$(grep -E '^# Version:' apply.bash | awk '{print $3}')"
 PATCH_REVISION="$("${CI_DIR}/patch-revision.sh")"
+RELEASE_INTRO_FILE="${REPO_ROOT}/.github/workflows/workflow.md"
+
+# True when the commit being built was authored by SeanathanVT (GitHub / git display name).
+commit_author_is_seanathanvt() {
+  local author email
+  author="$(git log -1 --format='%an')"
+  email="$(git log -1 --format='%ae')"
+  shopt -s nocasematch
+  [[ "$author" == *seanathanvt* || "$email" == *seanathanvt* ]]
+  local rc=$?
+  shopt -u nocasematch
+  return $rc
+}
 
 # Idempotency: skip only when an existing release was built from the same upstream
 # rom.zip *and* the same koensayr git revision (patches / apply.bash / Y1Bridge / su).
@@ -223,12 +236,30 @@ if [[ "${KOENSAYR_SKIP_PUBLISH:-}" == "1" ]]; then
 fi
 
 NOTES="${WORKDIR}/release-notes.md"
-cat > "$NOTES" <<EOF
-# Koensayr ${RELEASE_TAG}
-
+{
+  echo "# Koensayr ${RELEASE_TAG}"
+  echo ""
+  if [[ -f "$RELEASE_INTRO_FILE" ]]; then
+    grep -v '^Devs:' "$RELEASE_INTRO_FILE" || true
+  else
+    echo "Koensayr patched firmware for the Innioasis Y1."
+  fi
+  echo ""
+  if commit_author_is_seanathanvt; then
+    echo "## Detailed notes"
+    echo ""
+    git log -1 --format='%B'
+    echo ""
+  fi
+  echo "---"
+  echo ""
+  cat <<EOF
 Patched **rom.zip** built by [koensayr-auto](https://github.com/${GITHUB_REPOSITORY:-ryan-specter/koensayr-auto}) v${KOENSAYR_VERSION}.
 
 ## Upstream
+EOF
+} > "$NOTES"
+cat >> "$NOTES" <<EOF
 
 - Repository: [\`${SOURCE_REPO}\`](https://github.com/${SOURCE_REPO})
 - Release tag: \`${SOURCE_TAG}\`
