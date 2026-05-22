@@ -92,7 +92,7 @@ Known stock firmwares recognised by `KNOWN_FIRMWARES` in the bash. Add a row (sa
 | Version | system.img (raw, extracted) | boot.img (in zip; not consumed since v1.7.0) | rom.zip (input) | Music APK basename in `app/` |
 |---|---|---|---|---|
 | **3.0.2** | `473991dadeb1a8c4d25902dee9ee362b` | `1f7920228a20c01ad274c61c94a8cf36` | `82657db82578a38c6f1877e02407127a` | `com.innioasis.y1_3.0.2.apk` |
-| **3.0.7** | `663baf9f7f2a08caa82e3fba7a9baa28` | `83b946d1799b4f0281ba8e808ed7911b` | `02ae3ae89e20bde0a20e940f73e1ed1b` | `com.innioasis.y1_3.0.7.apk` |
+| **3.0.7** | `663baf9f7f2a08caa82e3fba7a9baa28` | `83b946d1799b4f0281ba8e808ed7911b` | `aa9847088859176c76d8e203970e7032` | `com.innioasis.y1_3.0.7.apk` |
 
 The MediaTek BT stack (`bin/mtkbt`, `lib/libextavrcp*.so`, `lib/libaudio.a2dp.default.so`, `app/MtkBt.odex`) is byte-identical between 3.0.2 and 3.0.7 — every native patch in `--avrcp` / `--bluetooth` applies unchanged. Only the music APK differs (resource-ID shifts + a few additions in `Y1Repository`), and `patch_y1_apk.py`'s smali anchors handle both builds.
 
@@ -114,7 +114,7 @@ Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/bui
 
 - Upstream tags **3.0.2** and **Latest-3.0.7** (published as `y1-stock-rom@3.0.2` / `@3.0.7`)
 
-For each input it runs `./apply.bash --all --no-flash --accept-any-firmware`, repacks `rom.zip`, and publishes a release on this repo.
+For each input it downloads upstream `rom.zip`, verifies SHA256 (from the release asset) and MD5 against [`KNOWN_FIRMWARES`](apply.bash), runs `./apply.bash --all --no-flash`, repacks `rom.zip`, and publishes a release on this repo.
 
 **Release tag pattern:** `y1-stock-rom@{firmware-version}` (e.g. `y1-stock-rom@3.0.2`). Each release attaches **`rom.zip`** (patched) plus **`build-manifest.json`**.
 

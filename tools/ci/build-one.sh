@@ -58,6 +58,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 CI_DIR="${REPO_ROOT}/tools/ci"
+# shellcheck source=firmware-manifest.sh
+source "${CI_DIR}/firmware-manifest.sh"
 WORKDIR="$(mktemp -d -t koensayr-ci.XXXXXX)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
@@ -80,20 +82,42 @@ fi
 echo "[build-one] Downloading upstream rom.zip.."
 curl -fsSL -o "${STAGING}/rom.zip" "$DOWNLOAD_URL"
 
+if ! FW_VERSION="$(firmware_version_from_slug "$SLUG")"; then
+  echo "ERROR: slug ${SLUG} is not a known y1-stock-rom firmware id" >&2
+  exit 1
+fi
+
+if [[ -n "$DIGEST" ]]; then
+  actual_digest="$(sha256sum "${STAGING}/rom.zip" | awk '{print $1}')"
+  if [[ "$actual_digest" != "$DIGEST" ]]; then
+    echo "ERROR: downloaded rom.zip sha256 ${actual_digest} != expected ${DIGEST}" >&2
+    exit 1
+  fi
+  echo "[build-one] Upstream rom.zip sha256 verified (${DIGEST:0:16}…)"
+fi
+
+rom_md5="$(md5sum "${STAGING}/rom.zip" | awk '{print $1}')"
+expected_rom_md5="$(firmware_manifest_field "$FW_VERSION" rom_md5)"
+if [[ "$rom_md5" != "$expected_rom_md5" ]]; then
+  echo "ERROR: rom.zip md5 ${rom_md5} does not match KNOWN_FIRMWARES v${FW_VERSION} (expected ${expected_rom_md5})" >&2
+  echo "       Refusing to patch — update apply.bash manifest or fix the upstream download URL." >&2
+  exit 1
+fi
+echo "[build-one] rom.zip md5 matches KNOWN_FIRMWARES v${FW_VERSION}"
+
 echo "[build-one] Extracting upstream layout.."
 "${CI_DIR}/extract-rom.sh" "${STAGING}/rom.zip" "$EXTRACT"
 
 echo "[build-one] Patching (koensayr ${KOENSAYR_VERSION}).."
-./apply.bash --all --no-flash --accept-any-firmware \
-  --firmware-slug "$SLUG" \
-  --artifacts-dir "$STAGING"
+./apply.bash --all --no-flash --artifacts-dir "$STAGING"
 
 # apply.bash names the loop-mounted image system-${VERSION_FIRMWARE}-devel.img
-# (manifest version e.g. 3.0.2, or --firmware-slug when using --accept-any-firmware).
+# (manifest version e.g. 3.0.2 / 3.0.7 when rom.zip matches KNOWN_FIRMWARES).
 resolve_devel_img() {
-  local staging="$1" slug="$2" source_tag="$3"
+  local staging="$1" fw_version="$2" slug="$3" source_tag="$4"
   local p
   for p in \
+    "${staging}/system-${fw_version}-devel.img" \
     "${staging}/system-${slug}-devel.img" \
     "${staging}/system-${source_tag}-devel.img"; do
     if [[ -f "$p" ]]; then
@@ -110,10 +134,10 @@ resolve_devel_img() {
   return 1
 }
 
-DEVEL_IMG="$(resolve_devel_img "$STAGING" "$SLUG" "$SOURCE_TAG" || true)"
+DEVEL_IMG="$(resolve_devel_img "$STAGING" "$FW_VERSION" "$SLUG" "$SOURCE_TAG" || true)"
 if [[ -z "$DEVEL_IMG" || ! -f "$DEVEL_IMG" ]]; then
   echo "ERROR: expected patched system image under ${STAGING}/" >&2
-  echo "       (tried system-${SLUG}-devel.img and system-${SOURCE_TAG}-devel.img)" >&2
+  echo "       (tried system-${FW_VERSION}-devel.img, system-${SLUG}-devel.img, system-${SOURCE_TAG}-devel.img)" >&2
   exit 1
 fi
 echo "[build-one] Using patched system image: ${DEVEL_IMG}"

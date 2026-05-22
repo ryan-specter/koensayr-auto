@@ -25,7 +25,7 @@ To add another stock tag, extend `Y1_UPSTREAM_TAGS` in `discover-inputs.sh`.
 
 ## Patch set
 
-Every green CI build runs `./apply.bash --all --no-flash --accept-any-firmware`:
+Every green CI build verifies upstream `rom.zip` SHA256 and MD5 against [`KNOWN_FIRMWARES`](../apply.bash), then runs `./apply.bash --all --no-flash` (strict manifest match — no `--accept-any-firmware`):
 
 - Music-player UX (`--music-apk`)
 - Bluetooth pairing (`--bluetooth`)
@@ -52,6 +52,7 @@ A build is skipped when a release already exists and its notes contain the upstr
 | Script | Role |
 |--------|------|
 | [`tools/ci/discover-inputs.sh`](../tools/ci/discover-inputs.sh) | Emit JSON matrix for allowlisted upstream `rom.zip` assets |
-| [`tools/ci/build-one.sh`](../tools/ci/build-one.sh) | Download → patch → repack → `gh release` |
+| [`tools/ci/build-one.sh`](../tools/ci/build-one.sh) | Download → MD5/SHA256 gate → patch → repack → `gh release` |
+| [`tools/ci/firmware-manifest.sh`](../tools/ci/firmware-manifest.sh) | Read `KNOWN_FIRMWARES` rows from `apply.bash` |
 | [`tools/ci/extract-rom.sh`](../tools/ci/extract-rom.sh) | Unzip upstream ROM; record sparse `system.img` |
 | [`tools/ci/repack-rom.sh`](../tools/ci/repack-rom.sh) | Replace `system.img` and zip patched `rom.zip` |
