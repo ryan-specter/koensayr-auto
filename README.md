@@ -64,6 +64,10 @@ Override bundled tooling with `--mtkclient-dir <path>` / `--python-venv <path>` 
 | `--remove-apps` | Remove bloatware (`ApplicationGuide`, `BasicDreams`, …). |
 | `--root` | Install `src/su/build/su` at `/system/xbin/su` (mode 06755). Pre-requires `make` in `src/su/`. |
 | `--all` | All of the above. Pre-requires the `src/su/` + `src/Y1Bridge/` builds. |
+| `--no-flash` | Patch only; write `system-*-devel.img` without MTKClient flash (CI / repack). |
+| `--accept-any-firmware` | Skip `KNOWN_FIRMWARES` MD5 checks; use `--firmware-slug` when unknown. Implies `--skip-md5` on patchers. |
+| `--firmware-slug <id>` | Output label when upstream `rom.zip` is not in the manifest (e.g. `y1-stock-rom-2.8.2`). |
+| `--skip-md5` | Bypass stock-binary MD5 gates in `patch_*.py` (diagnostic / CI). |
 
 Run `./apply.bash --help` for full flag detail. Patchers can also be run standalone — see [`src/patches/README.md`](src/patches/README.md).
 
@@ -104,9 +108,36 @@ Stock sizes: 3.0.2 `rom.zip` 259,502,414 bytes (raw `system.img` inside); 3.0.7 
 - For `--root` only: prebuilt `src/su/build/su` (`cd src/su && make`). Toolchain: `dnf install -y epel-release && dnf install -y gcc-arm-linux-gnu binutils-arm-linux-gnu make` (Rocky/Alma/RHEL/Fedora) or `gcc-arm-linux-gnueabi` on Debian/Ubuntu.
 - For `--avrcp` only: Android SDK + JDK 17+. `tools/install-android-sdk.sh` auto-installs into `tools/android-sdk/` (~1.5 GB, idempotent). Manual instructions: [`docs/ANDROID-SDK.md`](docs/ANDROID-SDK.md).
 
+## Automated releases (GitHub Actions)
+
+Workflow [`.github/workflows/build-firmware-releases.yml`](.github/workflows/build-firmware-releases.yml) discovers every upstream release asset named **`rom.zip`** from:
+
+- [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom)
+- [rockbox-y1/rockbox](https://github.com/rockbox-y1/rockbox)
+
+For each input it runs `./apply.bash --all --no-flash --accept-any-firmware`, repacks `rom.zip`, and publishes a release on this repo.
+
+**Release tag pattern:** `{repo-slug}@{upstream-tag}` (e.g. `y1-stock-rom@3.0.2`, `rockbox@stable-v0.5`). Each release attaches one patched **`rom.zip`**.
+
+**Triggers:** weekly schedule, pushes that touch patcher code, and manual `workflow_dispatch` (optional `force` / `source_repo` filter).
+
+**Confidence:** Stock **3.0.2** / **3.0.7** OTAs are hardware-verified. Older stock builds and Rockbox `rom.zip` files are built best-effort (`--skip-md5`); byte patchers may fail until offsets are validated for that image. See [`docs/SUPPORTED-FIRMWARE-CI.md`](docs/SUPPORTED-FIRMWARE-CI.md).
+
+Local dry-run (no GitHub publish):
+
+```bash
+KOENSAYR_SKIP_PUBLISH=1 ./tools/ci/build-one.sh \
+  --source-repo y1-community/y1-stock-rom --source-tag 3.0.2 \
+  --release-tag y1-stock-rom@3.0.2 \
+  --download-url "$(gh release view 3.0.2 --repo y1-community/y1-stock-rom --json assets -q '.assets[] | select(.name==\"rom.zip\") | .url')" \
+  --digest "$(gh release view 3.0.2 --repo y1-community/y1-stock-rom --json assets -q '.assets[] | select(.name==\"rom.zip\") | .digest' | sed 's/sha256://')" \
+  --slug y1-stock-rom-3.0.2
+```
+
 ## Documentation
 
 - [CHANGELOG.md](CHANGELOG.md) — version history (Keep a Changelog format)
+- [docs/SUPPORTED-FIRMWARE-CI.md](docs/SUPPORTED-FIRMWARE-CI.md) — CI upstream mapping and build expectations
 - [docs/ANDROID-SDK.md](docs/ANDROID-SDK.md) — Android SDK install instructions (only needed for `--avrcp` / Y1Bridge build)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — AVRCP metadata proxy architecture: data-path diagram, trampoline chain, response-builder calling conventions, ELF segment-extension technique, code-cave inventory. Read this first if working on the metadata pipeline.
 - [docs/BT-COMPLIANCE.md](docs/BT-COMPLIANCE.md) — current ICS Table 7 coverage scorecard (every Mandatory + every Optional row)
