@@ -107,6 +107,20 @@ def tag_allowed(repo: str, tag: str) -> bool:
     return False
 
 
+def upstream_release_tags(repo: str) -> list[str]:
+    """Tag names from gh release list (JSON array, not paginated NDJSON)."""
+    out = subprocess.run(
+        ["gh", "release", "list", "--repo", repo, "--limit", "200", "--json", "tagName"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    if not out.stdout.strip():
+        return []
+    releases = json.loads(out.stdout)
+    return [r["tagName"] for r in releases if r.get("tagName")]
+
+
 def tags_to_probe(repo: str) -> list[str]:
     if repo == Y1_REPO:
         return sorted(
@@ -114,13 +128,7 @@ def tags_to_probe(repo: str) -> list[str]:
             key=lambda t: Y1_UPSTREAM_TAGS[t],
         )
     if repo == ROCKBOX_REPO:
-        out = subprocess.run(
-            ["gh", "api", f"repos/{repo}/releases", "--paginate", "--jq", ".[].tag_name"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        tags = json.loads(out.stdout)
+        tags = upstream_release_tags(repo)
         allowed = [t for t in tags if tag_allowed(repo, t)]
         return sorted(allowed, key=lambda t: parse_stable_v(t) or ())
     return []
