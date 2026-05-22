@@ -87,11 +87,9 @@ APKTOOL_MD5     = "e28e4b4a413a252617d92b657a33c947"
 # `apt install openjdk-21-jdk` and either `update-alternatives --config java`
 # or invoke /usr/lib/jvm/java-21-openjdk-*/bin/java directly).
 
-# apktool 2.9.3's smali assembler is memory-frugal and runs fine at the
-# default JVM heap on this APK. Newer apktool releases (2.10+) use a parallel
-# ThreadPoolExecutor that may need `-Xmx2g` for large APKs; keeping this
-# slot here so a future bump can wire it up by changing one constant.
-APKTOOL_JVM_FLAGS: list = []
+# apktool 2.9.3's smali assembler is memory-frugal on this APK; CI runners
+# still need headroom when assembling two large DEX trees in one `b` pass.
+APKTOOL_JVM_FLAGS: list = ["-Xmx4g"]
 
 # Stock APK md5s — pulled from /system/app/com.innioasis.y1/ on clean stock
 # devices. The smali pattern matches in this script assume unpatched bytecode,
@@ -149,13 +147,23 @@ def run(cmd, **kw):
     return result
 
 def find_java():
-    for candidate in ["java",
-                      "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
-                      "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
-                      "/usr/lib/jvm/default-java/bin/java"]:
-        if shutil.which(candidate):
+    # Prefer JDK 17/21 — apktool 2.9.3's smali assembler is unreliable on Java 22+.
+    env_home = os.environ.get("JAVA_HOME", "").strip()
+    if env_home:
+        env_java = os.path.join(env_home, "bin", "java")
+        if os.path.isfile(env_java):
+            return env_java
+    for candidate in [
+        "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "/usr/lib/jvm/java-17-openjdk/bin/java",
+        "/usr/lib/jvm/java-21-openjdk/bin/java",
+        "java",
+        "/usr/lib/jvm/default-java/bin/java",
+    ]:
+        if shutil.which(candidate) or os.path.isfile(candidate):
             return candidate
-    sys.exit("ERROR: Java not found. Install Java 11+ and ensure 'java' is on PATH.")
+    sys.exit("ERROR: Java not found. Install Java 11–21 and ensure 'java' is on PATH.")
 
 
 def md5_file(path: str) -> str:
@@ -1234,9 +1242,9 @@ def _base_activity_dispatch_pairs():
     pairs = []
     for old_mid in (_OLD_DISPATCH_JAVA_LINES, _OLD_DISPATCH_JAVA, _OLD_DISPATCH_KOTLIN):
         pairs.append((prefix + old_mid, prefix + suffix))
-    # Kotlin 2.8.x often declares .locals 2 while still using v2/v3.
-    prefix_l2 = prefix.replace(".locals 7", ".locals 2", 1)
-    pairs.append((prefix_l2 + _OLD_DISPATCH_KOTLIN, prefix_l2 + suffix))
+    # Kotlin 2.8.x prologue with a low .locals count — AVRCP block needs v3.
+    prefix_l4 = prefix.replace(".locals 7", ".locals 4", 1)
+    pairs.append((prefix_l4 + _OLD_DISPATCH_KOTLIN, prefix_l4 + suffix))
     return pairs
 
 
@@ -1246,7 +1254,7 @@ def _base_player_dispatch_pairs():
     def _player_new_head(line304: str) -> str:
         return (
             ".method public dispatchKeyEvent(Landroid/view/KeyEvent;)Z\n"
-            "    .locals 2\n\n"
+            "    .locals 4\n\n"
             "    invoke-virtual {p1}, Landroid/view/KeyEvent;->getKeyCode()I\n\n"
             "    move-result v0\n\n"
             + _patch_h_avrcp_block("v0", "patch_h2")
@@ -1282,13 +1290,15 @@ def _base_player_dispatch_pairs():
         "    move-result v1"
     )
     new_kc_first = (
-        old_kc_first.replace(
-            "    move-result v0\n\n    invoke-virtual {p1}, Landroid/view/KeyEvent;->getAction()I",
-            "    move-result v0\n\n"
-            + _patch_h_avrcp_block("v0", "patch_h2")
-            + "\n\n    invoke-virtual {p1}, Landroid/view/KeyEvent;->getAction()I",
-            1,
-        )
+        ".method public dispatchKeyEvent(Landroid/view/KeyEvent;)Z\n"
+        "    .locals 4\n\n"
+        "    invoke-static {p1}, Lkotlin/jvm/internal/Intrinsics;->checkNotNull(Ljava/lang/Object;)V\n\n"
+        "    invoke-virtual {p1}, Landroid/view/KeyEvent;->getKeyCode()I\n\n"
+        "    move-result v0\n\n"
+        + _patch_h_avrcp_block("v0", "patch_h2")
+        + "\n\n"
+        "    invoke-virtual {p1}, Landroid/view/KeyEvent;->getAction()I\n\n"
+        "    move-result v1"
     )
     pairs.append((old_kc_first, new_kc_first))
     return pairs
@@ -2808,9 +2818,9 @@ for rel in PATCHED_SMALI_FILES:
 # -- Step 4: Reassemble DEX with apktool -------------------------------------
 print(f"\n[4/4] Reassembling smali -> DEX (this takes ~30 seconds)...")
 # apktool builds smali->DEX first, then tries aapt for resources.
-# Since we decoded with --no-res, the aapt step fails -- but the DEX
-# is already built by that point. We ignore the exit code intentionally.
-subprocess.run(
+# Since we decoded with --no-res, the aapt step often fails after DEX
+# assembly; we still require classes.dex + classes2.dex under build/apk/.
+build_result = subprocess.run(
     [java, *APKTOOL_JVM_FLAGS, "-jar", APKTOOL_JAR, "b", UNPACKED_DIR],
     capture_output=True, text=True
 )
@@ -2818,7 +2828,16 @@ subprocess.run(
 dex1 = os.path.join(UNPACKED_DIR, "build", "apk", "classes.dex")
 dex2 = os.path.join(UNPACKED_DIR, "build", "apk", "classes2.dex")
 if not os.path.exists(dex1) or not os.path.exists(dex2):
-    sys.exit("ERROR: DEX assembly failed -- classes.dex or classes2.dex not produced.")
+    tail = (build_result.stdout or "") + (build_result.stderr or "")
+    if tail.strip():
+        print("  apktool build output (last 4000 chars):")
+        print(tail[-4000:])
+    sys.exit(
+        "ERROR: DEX assembly failed -- classes.dex or classes2.dex not produced.\n"
+        f"  apktool exit code: {build_result.returncode}\n"
+        "  Typical causes: smali register overflow (.locals too small), method-id\n"
+        "  cap, or Java 22+ smali-assembler quirks — use JDK 17/21."
+    )
 print(f"  classes.dex  {os.path.getsize(dex1):,} bytes")
 print(f"  classes2.dex {os.path.getsize(dex2):,} bytes")
 

@@ -110,6 +110,7 @@ jobs:
       - name: Patch and publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           args=(
             --source-repo "${{ matrix.source_repo }}"
