@@ -6,7 +6,7 @@
 #   ./tools/ci/build-one.sh \
 #     --source-repo y1-community/y1-stock-rom \
 #     --source-tag 3.0.2 \
-#     --release-tag y1-stock-rom@3.0.2 \
+#     [--release-tag 3.0.2-koensayr-2.4.0]  # optional; derived from slug + apply.bash version if omitted
 #     --download-url <url> \
 #     --digest <sha256> \
 #     --slug y1-stock-rom-3.0.2 \
@@ -17,6 +17,7 @@ set -euo pipefail
 SOURCE_REPO=""
 SOURCE_TAG=""
 RELEASE_TAG=""
+RELEASE_TAG_ARG=""
 DOWNLOAD_URL=""
 DIGEST=""
 SLUG=""
@@ -26,7 +27,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --source-repo) SOURCE_REPO="$2"; shift 2 ;;
     --source-tag) SOURCE_TAG="$2"; shift 2 ;;
-    --release-tag) RELEASE_TAG="$2"; shift 2 ;;
+    --release-tag) RELEASE_TAG_ARG="$2"; shift 2 ;;
     --download-url) DOWNLOAD_URL="$2"; shift 2 ;;
     --digest) DIGEST="$2"; shift 2 ;;
     --slug) SLUG="$2"; shift 2 ;;
@@ -49,8 +50,8 @@ EOF
   esac
 done
 
-if [[ -z "$SOURCE_REPO" || -z "$SOURCE_TAG" || -z "$RELEASE_TAG" || -z "$DOWNLOAD_URL" || -z "$SLUG" ]]; then
-  echo "ERROR: --source-repo, --source-tag, --release-tag, --download-url, and --slug are required" >&2
+if [[ -z "$SOURCE_REPO" || -z "$SOURCE_TAG" || -z "$DOWNLOAD_URL" || -z "$SLUG" ]]; then
+  echo "ERROR: --source-repo, --source-tag, --download-url, and --slug are required" >&2
   exit 1
 fi
 
@@ -70,6 +71,16 @@ mkdir -p "$STAGING" "$EXTRACT"
 KOENSAYR_VERSION="$(grep -E '^# Version:' apply.bash | awk '{print $3}')"
 PATCH_REVISION="$("${CI_DIR}/patch-revision.sh")"
 RELEASE_INTRO_FILE="${REPO_ROOT}/.github/workflows/workflow.md"
+
+if ! FW_VERSION="$(firmware_version_from_slug "$SLUG")"; then
+  echo "ERROR: slug ${SLUG} is not a known y1-stock-rom firmware id" >&2
+  exit 1
+fi
+RELEASE_TAG="${FW_VERSION}-koensayr-${KOENSAYR_VERSION}"
+RELEASE_TITLE="${FW_VERSION}-koensayr-${KOENSAYR_VERSION}"
+if [[ -n "$RELEASE_TAG_ARG" && "$RELEASE_TAG_ARG" != "$RELEASE_TAG" ]]; then
+  echo "[build-one] NOTE: matrix release-tag ${RELEASE_TAG_ARG} ignored; using ${RELEASE_TAG}"
+fi
 
 # True when the commit being built was authored by SeanathanVT (GitHub / git display name).
 commit_author_is_seanathanvt() {
@@ -126,11 +137,6 @@ fi
 
 echo "[build-one] Downloading upstream rom.zip.."
 curl -fsSL -o "${STAGING}/rom.zip" "$DOWNLOAD_URL"
-
-if ! FW_VERSION="$(firmware_version_from_slug "$SLUG")"; then
-  echo "ERROR: slug ${SLUG} is not a known y1-stock-rom firmware id" >&2
-  exit 1
-fi
 
 if [[ -n "$DIGEST" ]]; then
   actual_digest="$(sha256sum "${STAGING}/rom.zip" | awk '{print $1}')"
@@ -220,6 +226,8 @@ data = {
     "source_repo": "${SOURCE_REPO}",
     "source_tag": "${SOURCE_TAG}",
     "release_tag": "${RELEASE_TAG}",
+    "release_title": "${RELEASE_TITLE}",
+    "firmware_version": "${FW_VERSION}",
     "slug": "${SLUG}",
     "upstream_digest_sha256": "${DIGEST}",
     "output_rom_sha256": h.hexdigest(),
@@ -237,8 +245,6 @@ fi
 
 NOTES="${WORKDIR}/release-notes.md"
 {
-  echo "# Koensayr ${RELEASE_TAG}"
-  echo ""
   if [[ -f "$RELEASE_INTRO_FILE" ]]; then
     grep -v '^Devs:' "$RELEASE_INTRO_FILE" || true
   else
@@ -246,7 +252,7 @@ NOTES="${WORKDIR}/release-notes.md"
   fi
   echo ""
   if commit_author_is_seanathanvt; then
-    echo "## Detailed notes"
+    echo "Detailed notes:"
     echo ""
     git log -1 --format='%B'
     echo ""
@@ -254,7 +260,9 @@ NOTES="${WORKDIR}/release-notes.md"
   echo "---"
   echo ""
   cat <<EOF
-Patched **rom.zip** built by [koensayr-auto](https://github.com/${GITHUB_REPOSITORY:-ryan-specter/koensayr-auto}) v${KOENSAYR_VERSION}.
+## Build metadata
+
+Patched **rom.zip** built from stock **${FW_VERSION}** by [koensayr-auto](https://github.com/${GITHUB_REPOSITORY:-ryan-specter/koensayr-auto}) v${KOENSAYR_VERSION}.
 
 ## Upstream
 EOF
@@ -300,7 +308,13 @@ EOF
 RELEASE_ASSET="${WORKDIR}/rom.zip"
 cp -f "$OUTPUT_ROM" "$RELEASE_ASSET"
 
-echo "[build-one] Publishing GitHub release ${RELEASE_TAG}.."
+LEGACY_RELEASE_TAG="y1-stock-rom@${FW_VERSION}"
+if [[ "$LEGACY_RELEASE_TAG" != "$RELEASE_TAG" ]] && gh release view "$LEGACY_RELEASE_TAG" >/dev/null 2>&1; then
+  echo "[build-one] Removing legacy release tag ${LEGACY_RELEASE_TAG}.."
+  gh release delete "$LEGACY_RELEASE_TAG" --yes
+fi
+
+echo "[build-one] Publishing GitHub release ${RELEASE_TAG} (${RELEASE_TITLE}).."
 echo "[build-one]   upstream sha256: ${upstream_sha}"
 echo "[build-one]   output sha256:   ${output_sha}"
 if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
@@ -308,7 +322,7 @@ if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
   gh release delete "$RELEASE_TAG" --yes
 fi
 gh release create "$RELEASE_TAG" "$RELEASE_ASSET" "$MANIFEST" \
-  --title "Koensayr ${RELEASE_TAG}" \
+  --title "${RELEASE_TITLE}" \
   --notes-file "$NOTES"
 
 echo "[build-one] Published ${RELEASE_TAG} (rom.zip + build-manifest.json)"

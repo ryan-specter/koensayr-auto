@@ -10,7 +10,7 @@ CI only builds these upstream tags (see [`tools/ci/discover-inputs.sh`](../tools
 |------------|---------------|-------|
 | [y1-community/y1-stock-rom](https://github.com/y1-community/y1-stock-rom) | **3.0.2**, **Latest-3.0.7** | `rom.zip` |
 
-**Koensayr release names:** stock **3.0.7** firmware is published as `y1-stock-rom@3.0.7` even though the upstream tag is `Latest-3.0.7`. Release notes still record the upstream tag.
+**Koensayr release tags:** `{firmware}-koensayr-{version}` (e.g. `3.0.7-koensayr-2.4.0`). Stock **3.0.7** is built from upstream tag `Latest-3.0.7`. User-facing copy comes from [`.github/workflows/workflow.md`](../.github/workflows/workflow.md); commits by **SeanathanVT** append a **Detailed notes:** section with the latest commit message.
 
 **Not built by CI:** other stock tags (`2.8.2`, `ADB-2.1.9`, `type-b-1.7.6`, …), `rom_type_b.zip`, `rom_240p.zip`, `update.zip`, voice packs, and other assets.
 
@@ -20,7 +20,7 @@ To add another stock tag, extend `Y1_UPSTREAM_TAGS` in `discover-inputs.sh`.
 
 ## Output naming
 
-- **GitHub release tag:** `{slug}@{firmware-version}` (e.g. `y1-stock-rom@3.0.2`, `y1-stock-rom@3.0.7`)
+- **GitHub release tag / title:** `{firmware-version}-koensayr-{koensayr-version}` (e.g. `3.0.2-koensayr-2.4.0`, `3.0.7-koensayr-2.4.0`)
 - **Internal firmware slug** (`--firmware-slug`): `@` replaced with `-` (e.g. `y1-stock-rom-3.0.2`) for `system-*-devel.img` naming
 
 ## Patch set

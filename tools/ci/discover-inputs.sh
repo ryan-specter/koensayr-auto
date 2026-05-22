@@ -2,7 +2,7 @@
 # discover-inputs.sh — build matrix for allowed y1-stock-rom rom.zip releases.
 #
 # Only these upstream tags are considered:
-#   y1-community/y1-stock-rom  → 3.0.2, Latest-3.0.7 (published as y1-stock-rom@3.0.2 / @3.0.7)
+#   y1-community/y1-stock-rom  → 3.0.2, Latest-3.0.7 (published as 3.0.2-koensayr-* / 3.0.7-koensayr-*)
 #
 # Usage:
 #   ./tools/ci/discover-inputs.sh [--source-repo OWNER/NAME] [--force]
@@ -30,7 +30,7 @@ Emits a JSON array of matrix objects:
   source_repo, source_tag, release_tag, download_url, digest, slug
 
 Upstream allowlist (rom.zip only):
-  y1-community/y1-stock-rom: 3.0.2, Latest-3.0.7 (→ koensayr release y1-stock-rom@3.0.2 / @3.0.7)
+  y1-community/y1-stock-rom: 3.0.2, Latest-3.0.7 (→ koensayr release 3.0.2-koensayr-VERSION / 3.0.7-koensayr-VERSION)
 EOF
       exit 0
       ;;
@@ -54,14 +54,18 @@ REPOS=(
   "y1-community/y1-stock-rom"
 )
 
-python3 - "$SOURCE_FILTER" "$FORCE" "${REPOS[@]}" <<'PY'
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+KOENSAYR_VERSION="$(grep -E '^# Version:' "${REPO_ROOT}/apply.bash" | awk '{print $3}')"
+
+python3 - "$SOURCE_FILTER" "$FORCE" "$KOENSAYR_VERSION" "${REPOS[@]}" <<'PY'
 import json
 import subprocess
 import sys
 
 source_filter = sys.argv[1]
 force = sys.argv[2] == "true"
-repos = sys.argv[3:]
+koensayr_version = sys.argv[3]
+repos = sys.argv[4:]
 
 Y1_REPO = "y1-community/y1-stock-rom"
 # Upstream GitHub release tag → firmware version for koensayr release naming.
@@ -112,7 +116,7 @@ for repo in repos:
         if asset is None:
             continue
         fw_version = Y1_UPSTREAM_TAGS[upstream_tag]
-        release_tag = f"y1-stock-rom@{fw_version}"
+        release_tag = f"{fw_version}-koensayr-{koensayr_version}"
         slug = f"y1-stock-rom-{fw_version}"
         entries.append(
             {

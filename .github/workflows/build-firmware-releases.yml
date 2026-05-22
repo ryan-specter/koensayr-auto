@@ -21,6 +21,7 @@ on:
       - "src/Y1Bridge/**"
       - "src/su/**"
       - ".github/workflows/build-firmware-releases.yml"
+      - ".github/workflows/workflow.md"
       - "tools/ci/**"
 
 permissions:
